@@ -36,7 +36,7 @@ class CAO {
 	 * CAO constructor.
 	 */
 	public function __construct() {
-		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ), 10, 1 );
+		add_action( 'admin_enqueue_scripts', array( $this, 'assets' ));
 		$this->add_field_gateways();
 		$this->add_event_cron();
 	}
@@ -58,7 +58,7 @@ class CAO {
 				if ( 'stripe' === $gateway && defined( 'WC_STRIPE_VERSION' ) && version_compare( WC_STRIPE_VERSION, '5.8.0', '>=' ) ) {
 					new Stripe();
 				} else {
-					add_filter( 'woocommerce_settings_api_form_fields_' . $gateway, array( $this, 'add_fields' ), 10, 1 );
+					add_filter( 'woocommerce_settings_api_form_fields_' . $gateway, array( $this, 'add_fields' ) );
 				}
 			}
 		}
@@ -105,8 +105,6 @@ class CAO {
 	 */
 	public function check_order() {
 
-		global $wpdb;
-
 		if ( $this->gateways ) {
 			foreach ( $this->gateways as $gateway ) {
 				$options = get_option( 'woocommerce_' . $gateway . '_settings' );
@@ -133,25 +131,16 @@ class CAO {
 
 					// Status to cancel
 					$woo_status = $this->woo_status();
-					$woo_status = implode( "','", $woo_status );
 
-					$orders = $wpdb->get_results(
-						$wpdb->prepare(
-							"
-							SELECT posts.ID
-							FROM $wpdb->posts as posts
-							INNER JOIN $wpdb->postmeta as meta
-							ON posts.ID = meta.post_id
-							WHERE posts.post_type = 'shop_order'
-							AND posts.post_status IN ('$woo_status')
-							AND posts.post_date < %s
-							AND meta.meta_key = '_payment_method'
-							AND meta.meta_value = %s
-						",
-							$old_date_format,
-							$gateway
+					$orders = wc_get_orders(
+						array(
+								'limit'        => -1,
+								'status'       => $woo_status,
+								'date_created' => '<' . $old_date_format,
+								'payment_method' => $gateway,
 						)
 					);
+
 					if ( $orders ) {
 						foreach ( $orders as $order ) {
 							// Cancel order.
@@ -226,7 +215,7 @@ class CAO {
 	 * @return string
 	 */
 	private function woocao_icon() {
-		return sprintf( '<span class="woocao-icon" title="%s"></span>', esc_html__( 'WooCommerce Cancel Abandoned Order', 'woo-cancel-abandoned-order' ) );
+		return sprintf( '<span class="woocao-icon" title="%s"></span>', esc_html__( 'Cancel Abandoned Order', 'woo-cancel-abandoned-order' ) );
 	}
 
 	/**
@@ -241,7 +230,7 @@ class CAO {
 
 		$new_fields = array(
 			'woocao'         => array(
-				'title'       => esc_html__( 'WooCommerce Cancel Abandoned Order', 'woo-cancel-abandoned-order' ),
+				'title'       => esc_html__( 'Cancel Abandoned Order', 'woo-cancel-abandoned-order' ),
 				'type'        => 'title',
 				'description' => '',
 				'default'     => '',
